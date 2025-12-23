@@ -57,9 +57,15 @@ struct ContentView: View {
                     }
                     Stepper("Step: \(engine.step)", value: $engine.step, in: 1...12)
 
-                    // Velocities basic edit (comma separated for now for simplicity, or just toggles)
-                    // For MVP let's just show text. Real app needs a better editor.
-                    Text("Velocities: 64, 100, 127")
+                    // Velocities
+                    VStack(alignment: .leading) {
+                        Text("Velocity Layers:")
+                        HStack {
+                            Toggle("Soft (64)", isOn: $engine.useLowVelocity)
+                            Toggle("Med (100)", isOn: $engine.useMidVelocity)
+                            Toggle("Hard (127)", isOn: $engine.useHighVelocity)
+                        }
+                    }
                 }
 
                 Section(header: Text("Timing & Format")) {

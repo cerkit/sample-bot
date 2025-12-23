@@ -10,6 +10,10 @@ class SamplingEngine: ObservableObject {
     @Published var startNote: Int = 36  // C1
     @Published var endNote: Int = 60  // C3
     @Published var velocityLayers: [Int] = [64, 100, 127]
+    @Published var useLowVelocity: Bool = true
+    @Published var useMidVelocity: Bool = true
+    @Published var useHighVelocity: Bool = true
+
     @Published var step: Int = 1
     @Published var noteDuration: Double = 2.0
     @Published var tailDuration: Double = 1.0
@@ -42,8 +46,21 @@ class SamplingEngine: ObservableObject {
 
         // Generate sampling queue
         var queue: [SampleEvent] = []
+
+        // Define active layers dynamically based on checkboxes
+        var activeVelocities: [Int] = []
+        if useLowVelocity { activeVelocities.append(64) }
+        if useMidVelocity { activeVelocities.append(100) }
+        if useHighVelocity { activeVelocities.append(127) }
+
+        if activeVelocities.isEmpty {
+            currentStatus = "Error: No velocity selected!"
+            isRunning = false
+            return
+        }
+
         for note in stride(from: startNote, through: endNote, by: step) {
-            for velocity in velocityLayers {
+            for velocity in activeVelocities {
                 queue.append(SampleEvent(note: note, velocity: velocity))
             }
         }
@@ -116,12 +133,6 @@ class SamplingEngine: ObservableObject {
 
                     // 6b. Normalize if requested
                     if self.shouldNormalize {
-                        // File is closed by stopRecording() immediately?
-                        // stopRecording uses async UI update but audioFile = nil is effectively synchronous cleanup
-                        // Let's add slight delay or assume it's safe since audioFile is nilled.
-                        // But we need to make sure the flush happened.
-                        // For safety, let's do it after a tiny delay or synchronously if we trust close().
-                        // AVAudioFile deinit closes it.
                         self.audioManager.normalizeAudio(at: fileURL)
                     }
 
