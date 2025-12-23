@@ -13,6 +13,8 @@ class SamplingEngine: ObservableObject {
     @Published var step: Int = 1
     @Published var noteDuration: Double = 2.0
     @Published var tailDuration: Double = 1.0
+    @Published var isStereo: Bool = false  // Default to Mono (or user preference)
+    @Published var inputChannel: Int = 0  // Default to Channel 1
 
     @Published var outputURL: URL? = nil
     @Published var isRunning = false
@@ -78,15 +80,18 @@ class SamplingEngine: ObservableObject {
             // Progress update logic could be better (needing initial count), but this is MVP
         }
 
-        // File Naming: Instrument_Note_Velocity.wav
-        // Note: Kontakt logic often prefers MIDI Note numbers or logical names.
-        // Let's use: Sample_NNN_VVV.wav
-        let filename = String(format: "Sample_%03d_%03d.wav", note, velocity)
+        // File Naming: NoteName_Velocity.wav (e.g. C#1_127.wav)
+        let noteName = self.getNoteName(midiNote: note)
+        // Sanitizing just in case (e.g. # is usually fine in fs, but let's be safe? macOS handles # fine)
+        let noteNameSanitized = noteName.replacingOccurrences(of: "/", with: "-")
+
+        let filename = String(format: "%@_%03d.wav", noteNameSanitized, velocity)
         let fileURL = outputBasURL.appendingPathComponent(filename)
 
         // 1. Start Record
         do {
-            try audioManager.startRecording(to: fileURL)
+            try audioManager.startRecording(
+                to: fileURL, isStereo: isStereo, inputChannel: inputChannel)
         } catch {
             print("Failed to start recording: \(error)")
             // abort or skip? Skip for now.
@@ -123,5 +128,20 @@ class SamplingEngine: ObservableObject {
         // Also cleanup current recording if needed?
         audioManager.stopRecording()
         midiManager.sendNoteOff(note: 60)  // Panic? Need a panic function.
+    }
+
+    private func getNoteName(midiNote: Int) -> String {
+        let noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        let octave = (midiNote / 12) - 1  // MIDI 60 is C4 or C3? Standard is C4=60, so 60/12 - 1 = 4. Wait.
+        // C4 (Middle C) = 60. 60/12 = 5. if octave is -1 based?
+        // Usually C-1 is 0. 0/12 = 0. 0-1 = -1. Correct.
+        // C3 (Yamaha) = 60?
+        // Let's stick to Standard: 60 = C4. (60 / 12) - 1 -> 5 - 1 = 4.
+        // If user wants C3=60, then (60/12) - 2.
+        // Let's use standard (Midi Note 0 = C-1)
+
+        let noteIndex = midiNote % 12
+        let name = noteNames[noteIndex]
+        return "\(name)\(octave)"
     }
 }

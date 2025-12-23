@@ -62,9 +62,19 @@ struct ContentView: View {
                     Text("Velocities: 64, 100, 127")
                 }
 
-                Section(header: Text("Timing")) {
+                Section(header: Text("Timing & Format")) {
                     TextField("Note Duration (s)", value: $engine.noteDuration, format: .number)
                     TextField("Tail Duration (s)", value: $engine.tailDuration, format: .number)
+                    Toggle("Stereo Recording", isOn: $engine.isStereo)
+
+                    Picker("Input Channel", selection: $engine.inputChannel) {
+                        // Show available channels based on audio manager logic (or hardcode reasonable range if async update is slow)
+                        // Note: range 0..<audioManager.inputChannelCount might crash if count is 0.
+                        // Let's assume at least 2 or use a safe range.
+                        ForEach(0..<max(2, audioManager.inputChannelCount), id: \.self) { ch in
+                            Text("Channel \(ch + 1)").tag(ch)
+                        }
+                    }
                 }
             }
 
