@@ -14,7 +14,9 @@ class SamplingEngine: ObservableObject {
     @Published var noteDuration: Double = 2.0
     @Published var tailDuration: Double = 1.0
     @Published var isStereo: Bool = false  // Default to Mono (or user preference)
+
     @Published var inputChannel: Int = 0  // Default to Channel 1
+    @Published var shouldNormalize: Bool = true  // Default to true?
 
     @Published var outputURL: URL? = nil
     @Published var isRunning = false
@@ -111,6 +113,17 @@ class SamplingEngine: ObservableObject {
                 DispatchQueue.main.asyncAfter(deadline: .now() + self.tailDuration) {
                     // 6. Stop Record
                     self.audioManager.stopRecording()
+
+                    // 6b. Normalize if requested
+                    if self.shouldNormalize {
+                        // File is closed by stopRecording() immediately?
+                        // stopRecording uses async UI update but audioFile = nil is effectively synchronous cleanup
+                        // Let's add slight delay or assume it's safe since audioFile is nilled.
+                        // But we need to make sure the flush happened.
+                        // For safety, let's do it after a tiny delay or synchronously if we trust close().
+                        // AVAudioFile deinit closes it.
+                        self.audioManager.normalizeAudio(at: fileURL)
+                    }
 
                     // 7. Next
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

@@ -66,6 +66,7 @@ struct ContentView: View {
                     TextField("Note Duration (s)", value: $engine.noteDuration, format: .number)
                     TextField("Tail Duration (s)", value: $engine.tailDuration, format: .number)
                     Toggle("Stereo Recording", isOn: $engine.isStereo)
+                    Toggle("Normalize Audio", isOn: $engine.shouldNormalize)
 
                     Picker("Input Channel", selection: $engine.inputChannel) {
                         // Show available channels based on audio manager logic (or hardcode reasonable range if async update is slow)

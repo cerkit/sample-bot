@@ -106,6 +106,7 @@ class AudioManager: ObservableObject {
                 if self.outputBuffer == nil
                     || self.outputBuffer?.frameCapacity != buffer.frameLength
                 {
+                    // Note: frameCapacity must be sufficient.
                     self.outputBuffer = AVAudioPCMBuffer(
                         pcmFormat: audioFile.processingFormat, frameCapacity: buffer.frameCapacity)
                 }
@@ -170,6 +171,87 @@ class AudioManager: ObservableObject {
 
         DispatchQueue.main.async {
             self.isRecording = false
+        }
+    }
+
+    // Normalization Logic
+    func normalizeAudio(at url: URL) {
+        do {
+            // 1. Read File
+            let inFile = try AVAudioFile(forReading: url)
+            let frameCount = AVAudioFrameCount(inFile.length)
+
+            // Safety check for empty files
+            guard frameCount > 0 else {
+                print("Normalize: File is empty.")
+                return
+            }
+
+            guard
+                let buffer = AVAudioPCMBuffer(
+                    pcmFormat: inFile.processingFormat, frameCapacity: frameCount)
+            else {
+                print("Normalize: Failed to create buffer.")
+                return
+            }
+
+            try inFile.read(into: buffer)
+
+            // 2. Find Peak
+            var maxPeak: Float = 0.000001  // Avoid divide by zero
+
+            if let floatData = buffer.floatChannelData {
+                let channelCount = Int(buffer.format.channelCount)
+                for channel in 0..<channelCount {
+                    let channelData = floatData[channel]
+                    // vDSP is faster but swift Loop is fine for small files
+                    for i in 0..<Int(buffer.frameLength) {
+                        let absSample = abs(channelData[i])
+                        if absSample > maxPeak {
+                            maxPeak = absSample
+                        }
+                    }
+                }
+            }
+
+            // 3. Calculate Gain
+            // Target -1.0 dB = 10^(-1/20) approx 0.891
+            let targetPeak: Float = 0.891
+
+            // If peak is already 0 (silence), don't boost infinite noise
+            if maxPeak < 0.001 {
+                print("Normalize: Signal too weak (Silence?), skipping.")
+                return
+            }
+
+            let gain = targetPeak / maxPeak
+            print("DEBUG: Normalizing. Peak: \(maxPeak), Target: \(targetPeak), Gain: \(gain)")
+
+            if abs(gain - 1.0) < 0.01 {
+                print("Normalize: Gain close to 1, skipping.")
+                return
+            }
+
+            // 4. Apply Gain
+            if let floatData = buffer.floatChannelData {
+                let channelCount = Int(buffer.format.channelCount)
+                for channel in 0..<channelCount {
+                    let channelData = floatData[channel]
+                    for i in 0..<Int(buffer.frameLength) {
+                        channelData[i] *= gain
+                    }
+                }
+            }
+
+            // 5. Write back (Overwrite)
+            // Safer to use the SAME format settings as input file
+            let outFile = try AVAudioFile(forWriting: url, settings: inFile.fileFormat.settings)
+            try outFile.write(from: buffer)
+
+            print("Normalize: Complete.")
+
+        } catch {
+            print("Normalize Error: \(error)")
         }
     }
 }
