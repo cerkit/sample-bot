@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:sample-bot}",
+            "name": "Debug SampleBot",
+            "program": "${workspaceFolder:sample-bot}/.build/debug/SampleBot",
+            "preLaunchTask": "swift: Build Debug SampleBot"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:sample-bot}",
+            "name": "Release SampleBot",
+            "program": "${workspaceFolder:sample-bot}/.build/release/SampleBot",
+            "preLaunchTask": "swift: Build Release SampleBot"
+        }
+    ]
+}

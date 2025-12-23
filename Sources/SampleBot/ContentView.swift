@@ -1,0 +1,111 @@
+import SwiftUI
+
+struct ContentView: View {
+    @StateObject var midiManager = MidiManager()
+    @StateObject var audioManager = AudioManager()
+    @StateObject var engine: SamplingEngine
+
+    init() {
+        let midi = MidiManager()
+        let audio = AudioManager()
+        _midiManager = StateObject(wrappedValue: midi)
+        _audioManager = StateObject(wrappedValue: audio)
+        _engine = StateObject(wrappedValue: SamplingEngine(midiManager: midi, audioManager: audio))
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Sample Bot")
+                .font(.largeTitle)
+                .bold()
+
+            // Output Folder
+            HStack {
+                Text(engine.outputURL?.path ?? "No Output Folder Selected")
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(5)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(5)
+
+                Button("Select Folder") {
+                    selectFolder()
+                }
+            }
+            .padding(.horizontal)
+
+            Divider()
+
+            // Settings
+            Form {
+                Section(header: Text("MIDI Settings")) {
+                    Picker("Destination", selection: $midiManager.selectedDestinationIndex) {
+                        ForEach(midiManager.destinations) { dest in
+                            Text(dest.name).tag(dest.id)
+                        }
+                    }
+                    Button("Refresh Destinations") {
+                        midiManager.refreshDestinations()
+                    }
+                }
+
+                Section(header: Text("Range & Velocity")) {
+                    HStack {
+                        TextField(
+                            "Start Note", value: $engine.startNote, formatter: NumberFormatter())
+                        TextField("End Note", value: $engine.endNote, formatter: NumberFormatter())
+                    }
+                    Stepper("Step: \(engine.step)", value: $engine.step, in: 1...12)
+
+                    // Velocities basic edit (comma separated for now for simplicity, or just toggles)
+                    // For MVP let's just show text. Real app needs a better editor.
+                    Text("Velocities: 64, 100, 127")
+                }
+
+                Section(header: Text("Timing")) {
+                    TextField("Note Duration (s)", value: $engine.noteDuration, format: .number)
+                    TextField("Tail Duration (s)", value: $engine.tailDuration, format: .number)
+                }
+            }
+
+            Divider()
+
+            // Status & Control
+            VStack {
+                Text(engine.currentStatus)
+                    .font(.headline)
+                    .foregroundColor(engine.isRunning ? .green : .primary)
+
+                // Progress Bar logic could go here
+
+                Button(action: {
+                    if engine.isRunning {
+                        engine.stopSampling()
+                    } else {
+                        engine.startSampling()
+                    }
+                }) {
+                    Text(engine.isRunning ? "Stop Sampling" : "Start Sampling")
+                        .font(.title2)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(engine.outputURL == nil)
+            }
+            .padding()
+        }
+        .frame(minWidth: 500, minHeight: 600)
+    }
+
+    func selectFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+
+        if panel.runModal() == .OK {
+            engine.outputURL = panel.url
+        }
+    }
+}
