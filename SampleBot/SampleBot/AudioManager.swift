@@ -37,6 +37,24 @@ class AudioManager: ObservableObject {
         inputNode!.installTap(onBus: 0, bufferSize: 4096, format: format) { (buffer, time) in
             do {
                 try self.audioFile?.write(from: buffer)
+
+                // Debug: Calculate RMS to check for signal
+                guard let channelData = buffer.floatChannelData else { return }
+                let channelDataValue = channelData.pointee
+                let channelDataValueArray = stride(
+                    from: 0,
+                    to: Int(buffer.frameLength),
+                    by: buffer.stride
+                ).map { channelDataValue[$0] }
+
+                let rms = sqrt(
+                    channelDataValueArray.map { $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
+                let avgPower = 20 * log10(rms)
+
+                if avgPower > -60 {
+                    // Only print if there is some signal to avoid spamming -Inf
+                    print("Recording Signal: \(String(format: "%.1f", avgPower)) dB")
+                }
             } catch {
                 print("Error writing audio: \(error)")
             }

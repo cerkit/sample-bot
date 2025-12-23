@@ -8,6 +8,7 @@ class MidiManager: ObservableObject {
 
     private var midiClient = MIDIClientRef()
     private var outPort = MIDIPortRef()
+    private var virtualSource = MIDIEndpointRef()
 
     struct MidiDestination: Identifiable, Hashable {
         let id: Int
@@ -31,6 +32,12 @@ class MidiManager: ObservableObject {
         if status != noErr {
             print("Error creating MIDI output port: \(status)")
             return
+        }
+
+        // Create a virtual source that other apps can see as an input
+        status = MIDISourceCreate(midiClient, "SampleBot MIDI" as CFString, &virtualSource)
+        if status != noErr {
+            print("Error creating MIDI virtual source: \(status)")
         }
     }
 
@@ -59,9 +66,7 @@ class MidiManager: ObservableObject {
     }
 
     func sendNoteOn(note: UInt8, velocity: UInt8) {
-        guard destinations.indices.contains(selectedDestinationIndex) else { return }
-        let endpoint = destinations[selectedDestinationIndex].endpointRef
-
+        // Prepare MIDI packet
         var packet = MIDIPacket()
         packet.timeStamp = 0  // Immediate
         packet.length = 3
@@ -70,13 +75,19 @@ class MidiManager: ObservableObject {
         packet.data.2 = velocity
 
         var packetList = MIDIPacketList(numPackets: 1, packet: packet)
-        MIDISend(outPort, endpoint, &packetList)
+
+        // 1. Send to Virtual Source (so DAW sees it)
+        MIDIReceived(virtualSource, &packetList)
+
+        // 2. Send to Selected Destination (Hardware) if selected
+        if destinations.indices.contains(selectedDestinationIndex) {
+            let endpoint = destinations[selectedDestinationIndex].endpointRef
+            MIDISend(outPort, endpoint, &packetList)
+        }
     }
 
     func sendNoteOff(note: UInt8) {
-        guard destinations.indices.contains(selectedDestinationIndex) else { return }
-        let endpoint = destinations[selectedDestinationIndex].endpointRef
-
+        // Prepare MIDI packet
         var packet = MIDIPacket()
         packet.timeStamp = 0
         packet.length = 3
@@ -85,6 +96,14 @@ class MidiManager: ObservableObject {
         packet.data.2 = 0
 
         var packetList = MIDIPacketList(numPackets: 1, packet: packet)
-        MIDISend(outPort, endpoint, &packetList)
+
+        // 1. Send to Virtual Source (so DAW sees it)
+        MIDIReceived(virtualSource, &packetList)
+
+        // 2. Send to Selected Destination (Hardware) if selected
+        if destinations.indices.contains(selectedDestinationIndex) {
+            let endpoint = destinations[selectedDestinationIndex].endpointRef
+            MIDISend(outPort, endpoint, &packetList)
+        }
     }
 }
