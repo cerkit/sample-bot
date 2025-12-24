@@ -21,6 +21,8 @@ class SamplingEngine: ObservableObject {
 
     @Published var inputChannel: Int = 0  // Default to Channel 1
     @Published var shouldNormalize: Bool = true  // Default to true?
+    @Published var trimDuration: Double = 0.0  // Silence trim in seconds
+    @Published var filenamePrefix: String = ""  // Sample Name Prefix
 
     @Published var outputURL: URL? = nil
     @Published var isRunning = false
@@ -99,12 +101,12 @@ class SamplingEngine: ObservableObject {
             // Progress update logic could be better (needing initial count), but this is MVP
         }
 
-        // File Naming: NoteName_Velocity.wav (e.g. C#1_127.wav)
+        // File Naming: Prefix_NoteName_Velocity.wav (e.g. MOOG_C#1_127.wav)
         let noteName = self.getNoteName(midiNote: note)
         // Sanitizing just in case (e.g. # is usually fine in fs, but let's be safe? macOS handles # fine)
         let noteNameSanitized = noteName.replacingOccurrences(of: "/", with: "-")
 
-        let filename = String(format: "%@_%03d.wav", noteNameSanitized, velocity)
+        let filename = String(format: "%@%@_%03d.wav", filenamePrefix, noteNameSanitized, velocity)
         let fileURL = outputBasURL.appendingPathComponent(filename)
 
         // 1. Start Record
@@ -134,6 +136,11 @@ class SamplingEngine: ObservableObject {
                     // 6b. Normalize if requested
                     if self.shouldNormalize {
                         self.audioManager.normalizeAudio(at: fileURL)
+                    }
+
+                    // 6c. Trim Pre-Note Silence (Offset)
+                    if self.trimDuration > 0 {
+                        self.audioManager.trimAudio(at: fileURL, startOffset: self.trimDuration)
                     }
 
                     // 7. Next

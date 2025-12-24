@@ -71,6 +71,8 @@ struct ContentView: View {
                 Section(header: Text("Timing & Format")) {
                     TextField("Note Duration (s)", value: $engine.noteDuration, format: .number)
                     TextField("Tail Duration (s)", value: $engine.tailDuration, format: .number)
+                    TextField("Trim Start (s)", value: $engine.trimDuration, format: .number)  // Added Trim
+                    TextField("Filename Prefix", text: $engine.filenamePrefix)  // Added Prefix
                     Toggle("Stereo Recording", isOn: $engine.isStereo)
                     Toggle("Normalize Audio", isOn: $engine.shouldNormalize)
 

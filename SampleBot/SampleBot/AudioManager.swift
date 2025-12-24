@@ -254,4 +254,61 @@ class AudioManager: ObservableObject {
             print("Normalize Error: \(error)")
         }
     }
+
+    // Trim Start Logic
+    func trimAudio(at url: URL, startOffset: Double) {
+        guard startOffset > 0 else { return }
+
+        do {
+            let inFile = try AVAudioFile(forReading: url)
+            let frameCount = AVAudioFrameCount(inFile.length)
+            let sampleRate = inFile.processingFormat.sampleRate
+
+            let trimFrames = AVAudioFrameCount(startOffset * sampleRate)
+
+            if trimFrames >= frameCount {
+                print("Trim: Offset larger than file duration. Skipping.")
+                return
+            }
+
+            let newFrameCount = frameCount - trimFrames
+
+            guard
+                let oldBuffer = AVAudioPCMBuffer(
+                    pcmFormat: inFile.processingFormat, frameCapacity: frameCount),
+                let newBuffer = AVAudioPCMBuffer(
+                    pcmFormat: inFile.processingFormat, frameCapacity: newFrameCount)
+            else {
+                print("Trim: Failed to create buffers.")
+                return
+            }
+
+            try inFile.read(into: oldBuffer)
+            newBuffer.frameLength = newFrameCount
+
+            // Copy data via UnsafePointers
+            if let oldChData = oldBuffer.floatChannelData,
+                let newChData = newBuffer.floatChannelData
+            {
+                let channelCount = Int(inFile.processingFormat.channelCount)
+
+                for ch in 0..<channelCount {
+                    let srcPtr = oldChData[ch].advanced(by: Int(trimFrames))
+                    let dstPtr = newChData[ch]
+
+                    // memcpy: dest, src, bytes
+                    memcpy(dstPtr, srcPtr, Int(newFrameCount) * MemoryLayout<Float>.size)
+                }
+            }
+
+            // Overwrite file
+            let outFile = try AVAudioFile(forWriting: url, settings: inFile.fileFormat.settings)
+            try outFile.write(from: newBuffer)
+
+            print("Trim: Removed \(startOffset)s from start.")
+
+        } catch {
+            print("Trim Error: \(error)")
+        }
+    }
 }
