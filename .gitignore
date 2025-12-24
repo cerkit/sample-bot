@@ -32,3 +32,8 @@ output/
 
 # User settings
 *.xcuserstate
+
+# Custom build directory
+.build_xcode/
+*.zip
+
