@@ -35,5 +35,7 @@ output/
 
 # Custom build directory
 .build_xcode/
+.build_dest/
+Dist/
 *.zip
 
