@@ -39,19 +39,11 @@ SampleBot is a macOS utility designed to automate the process of sampling hardwa
 - **Built with**: SwiftUI, AVFoundation, CoreMIDI.
 - **Format**: Records 32-bit Float WAV files (de-interleaved), suitable for high-quality audio production.
 
-## Running Locally
+## Installation
 
-SampleBot is not yet notarized by Apple, so you may see a "Malicious software" or "Unverified developer" warning when trying to run the app for the first time.
+1.  Download the latest release zip file.
+2.  Unzip the file.
+3.  Drag `SampleBot.app` to your **Applications** folder.
+4.  Double-click to launch.
 
-### How to Open
-1.  **Right-click** (or Control-click) on `SampleBot.app`.
-2.  Select **Open** from the context menu.
-3.  Click **Open** in the dialog box that appears.
-
-You only need to do this once. Future launches can be done normally.
-
-### Troubleshooting
-If you still encounter issues or "App is damaged" errors, you can remove the quarantine attribute via the terminal:
-```bash
-xattr -cr /path/to/SampleBot.app
-```
+*(Since the app is signed and notarized, it should open without security warnings.)*
