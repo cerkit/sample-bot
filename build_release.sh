@@ -34,6 +34,7 @@ xcodebuild archive \
   -configuration Release \
   -archivePath "$ARCHIVE_PATH" \
   -destination 'generic/platform=macOS' \
+  CODE_SIGN_STYLE="Manual" \
   CODE_SIGN_IDENTITY="Developer ID Application" \
   DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" || exit 1
 
