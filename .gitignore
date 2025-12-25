@@ -38,4 +38,5 @@ output/
 .build_dest/
 Dist/
 *.zip
+.env
 
